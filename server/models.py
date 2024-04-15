@@ -1,36 +1,58 @@
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import MetaData
-from sqlalchemy_serializer import SerializerMixin
+from sqlalchemy.orm import validates
+db = SQLAlchemy()
 
-metadata = MetaData(naming_convention={
-    "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
-})
-
-db = SQLAlchemy(metadata=metadata)
-
-class Article(db.Model, SerializerMixin):
-    __tablename__ = 'articles'
-
+class Author(db.Model):
+    __tablename__ = 'authors'
+    
     id = db.Column(db.Integer, primary_key=True)
-    author = db.Column(db.String)
-    title = db.Column(db.String)
+    name= db.Column(db.String, unique=True, nullable=False)
+    phone_number = db.Column(db.String)
+    created_at = db.Column(db.DateTime, server_default=db.func.now())
+    updated_at = db.Column(db.DateTime, onupdate=db.func.now())
+
+    # Add validators 
+    @validates('name')
+    def validate_name(self, key, name):
+        if name == "":
+            raise ValueError("Name should not be an empty string")
+        else:
+            if Author.query.filter(Author.name == name).first():
+                raise ValueError("Name already exists")
+        return name
+    
+    @validates('phone_number')
+    def validate_phone_number(self, key, number):
+        if len(number) != 10 or not number.isdigit():
+            raise ValueError("Number should have 10 digits")
+        return number
+
+    def __repr__(self):
+        return f'Author(id={self.id}, name={self.name})'
+
+class Post(db.Model):
+    __tablename__ = 'posts'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String, nullable=False)
     content = db.Column(db.String)
-    preview = db.Column(db.String)
-    minutes_to_read = db.Column(db.Integer)
-    date = db.Column(db.DateTime, server_default=db.func.now())
+    category = db.Column(db.String)
+    summary = db.Column(db.String)
+    created_at = db.Column(db.DateTime, server_default=db.func.now())
+    updated_at = db.Column(db.DateTime, onupdate=db.func.now())
 
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    # Add validators  
+    @validates('content')
+    def validate_content(self, key, words):
+        if len(words) != 250 or len(words) > 250:
+            raise ValueError("Content should be at least 250 characters long")
+        return words
+
+    @validates('summary')
+    def validate_summary(self, key, words):
+        if len(words) != 250:
+            raise ValueError("Content should be 250 characters long")
+        return words
 
     def __repr__(self):
-        return f'Article {self.id} by {self.author}'
-
-class User(db.Model, SerializerMixin):
-    __tablename__ = 'users'
-
-    id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String, unique=True)
-
-    articles = db.relationship('Article', backref='user')
-
-    def __repr__(self):
-        return f'User {self.username}, ID {self.id}'
+        return f'Post(id={self.id}, title={self.title} content={self.content}, summary={self.summary})'

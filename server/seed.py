@@ -1,55 +1,31 @@
 #!/usr/bin/env python3
 
-from random import randint
+from random import choice as rc
 
 from faker import Faker
 
 from app import app
-from models import db, Article, User
+from models import db, Author, Post
+
 
 fake = Faker()
 
 with app.app_context():
 
-    print("Deleting all records...")
-    Article.query.delete()
-    User.query.delete()
+    Author.query.delete()
+    Post.query.delete()
 
-    fake = Faker()
+    authors = []
+    for n in range(25):
+        author = Author(name=fake.name(), phone_number='1324543333')
+        authors.append(author)
 
-    print("Creating users...")
-    users = []
-    usernames = []
-    for i in range(25):
+    db.session.add_all(authors)
+    posts = []
+    for n in range(25):
+        post = Post(title='Secret banana', content='This is the content Secret' * 50, category= 'Fiction', summary="Summary Secret" )
+        posts.append(post)
 
-        username = fake.first_name()
-        while username in usernames:
-            username = fake.first_name()
-        
-        usernames.append(username)
+    db.session.add_all(posts)
 
-        user = User(username=username)
-        users.append(user)
-
-    db.session.add_all(users)
-
-    print("Creating articles...")
-    articles = []
-    for i in range(100):
-        content = fake.paragraph(nb_sentences=8)
-        preview = content[:25] + '...'
-        
-        article = Article(
-            author=fake.name(),
-            title=fake.sentence(),
-            content=content,
-            preview=preview,
-            minutes_to_read=randint(1,20),
-        )
-
-        articles.append(article)
-
-    db.session.add_all(articles)
-    
     db.session.commit()
-    print("Complete.")
